@@ -1,0 +1,18 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.backup
+
+# Sensitive/variable files (pick what you want)
+*.tfvars
+*.tfvars.json
+
+# Logs
+crash.log
+crash.*.log
+
+# OS / Editor
+.vscode/
+.DS_Store
