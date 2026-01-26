@@ -1,0 +1,53 @@
+name: Start/Stop Lab Infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "start or stop"
+        required: true
+        type: choice
+        options: [start, stop]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  control:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: eu-central-1
+      ASG_NAME: lab-app-asg
+      DB_INSTANCE_ID: REPLACE_ME
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubInfraControllerRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Start infra (ASG=1, DB=start)
+        if: ${{ github.event.inputs.action == 'start' }}
+        run: |
+          set -euo pipefail
+          aws ec2 start-instances --instance-ids "$DB_INSTANCE_ID"
+
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name "$ASG_NAME" \
+            --min-size 1 --max-size 1 --desired-capacity 1
+
+          echo "Started ✅"
+
+      - name: Stop infra (ASG=0, DB=stop)
+        if: ${{ github.event.inputs.action == 'stop' }}
+        run: |
+          set -euo pipefail
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name "$ASG_NAME" \
+            --min-size 0 --max-size 0 --desired-capacity 0
+
+          aws ec2 stop-instances --instance-ids "$DB_INSTANCE_ID"
+          echo "Stopped ✅"
